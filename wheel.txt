@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歌曲转盘</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            min-height:100vh;
+            background: radial-gradient(circle at center, #182244, #000000);
+            background-size: cover;
+            padding:20px;
+        }
+        .glass-box {
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding:24px;
+            margin: 20px auto;
+            max-width:700px;
+            transition: all 0.3s ease;
+        }
+        .back-btn{
+            padding:9px 16px;
+            border-radius:8px;
+            border:none;
+            background:#41729F;
+            color:#fff;
+            cursor:pointer;
+            font-size:15px;
+            transition: all 0.2s;
+        }
+        .back-btn:hover {
+            filter: brightness(1.15);
+        }
+        .container{
+            text-align:center;
+            margin-top:30px;
+        }
+        #wheel-box{
+            width:420px;
+            height:420px;
+            margin:0 auto 30px;
+            position:relative;
+        }
+        #wheel{
+            width:420px;
+            height:420px;
+            border-radius:50%;
+            transition: transform 4s cubic-bezier(0.2,0.8,0.2,1);
+            position:relative;
+            overflow:hidden;
+            background:#ffffff;
+            transform-origin: 50% 50% !important;
+        }
+        .pointer{
+            width: 0;
+            height: 0;
+            border-left: 16px solid transparent;
+            border-right: 16px solid transparent;
+            border-top: 32px solid #ff4757;
+            position:absolute;
+            left:50%;
+            top:-12px;
+            transform:translateX(-50%);
+            z-index:99;
+        }
+        #start-btn{
+            padding:12px 32px;
+            font-size:18px;
+            border:none;
+            border-radius:10px;
+            background:#e67e22;
+            color:#fff;
+            cursor:pointer;
+            transition: all 0.2s;
+        }
+        #start-btn:disabled{
+            background:#666;
+            cursor:not-allowed;
+            filter:none;
+        }
+        #start-btn:not(:disabled):hover{
+            filter: brightness(1.15);
+        }
+        .result-text{
+            color:#fff;
+            font-size:20px;
+            margin-top:24px;
+            min-height:30px;
+            transition: opacity 0.3s ease;
+        }
+        .tip-text{
+            color:#fff;
+            margin:12px 0;
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="location.href='index.html'">← 返回歌单</button>
+    <div class="glass-box container">
+        <div class="tip-text" id="list-tip"></div>
+        <div id="wheel-box">
+            <div class="pointer"></div>
+            <div id="wheel"></div>
+        </div>
+        <button id="start-btn">开始转动</button>
+        <div class="result-text" id="result"></div>
+    </div>
+
+<script>
+const wheelDom = document.getElementById("wheel");
+const startBtn = document.getElementById("start-btn");
+const resultDom = document.getElementById("result");
+const tipDom = document.getElementById("list-tip");
+
+let songList = [];
+let rotating = false;
+let lastDeg = 0;
+const MAX_CAPACITY = 1000;
+const SCALE_THRESHOLD = 20;
+const HIDE_TEXT_THRESHOLD = 40;
+const CX = 210;
+const CY = 210;
+const OUTER_RADIUS = 204;
+const SECTOR_RADIUS = 192;
+
+function init(){
+    const str = localStorage.getItem("wheelSongList");
+    if(!str){
+        tipDom.innerText = "暂无歌曲，请先前往歌单页面筛选！";
+        startBtn.disabled = true;
+        return;
+    }
+    songList = JSON.parse(str);
+    if(songList.length ===0){
+        tipDom.innerText = "筛选结果为空！";
+        startBtn.disabled = true;
+        return;
+    }
+    if(songList.length > MAX_CAPACITY){
+        alert(`歌曲数量超过上限${MAX_CAPACITY}首，仅加载前${MAX_CAPACITY}首`);
+        songList = songList.slice(0, MAX_CAPACITY);
+    }
+    tipDom.innerText = `转盘载入歌曲：${songList.length}首`;
+    drawWheel();
+}
+
+function drawWheel(){
+    const total = songList.length;
+    const sliceDeg = 360 / total;
+    const colors = ["#ff6b6b","#4ecdc4","#45b7d1","#ffe066","#a8e6cf","#ffd3a5","#c9b1ff","#ffacc5"];
+    let html = `<svg width="420" height="420" viewBox="0 0 420 420">`;
+    let fontSize = 12;
+    if(total > SCALE_THRESHOLD) fontSize = Math.max(5, 12 - (total - SCALE_THRESHOLD)*0.3);
+    const showText = total <= HIDE_TEXT_THRESHOLD;
+    for(let i=0;i<total;i++){
+        const start = sliceDeg*i;
+        const end = sliceDeg*(i+1);
+        const color = colors[i % colors.length];
+        html += createSlice(start, end, color, songList[i]["歌曲名称"], fontSize, showText);
+    }
+    html += `<circle cx="${CX}" cy="${CY}" r="${OUTER_RADIUS}" fill="none" stroke="#ffffff" stroke-width="12"/>`;
+    html += `</svg>`;
+    wheelDom.innerHTML = html;
+}
+
+function createSlice(startDeg, endDeg, fill, text, fontSize, showText){
+    const deg2rad = d => d * Math.PI / 180;
+    const offset = -90;
+    const startRad = deg2rad(startDeg + offset);
+    const endRad = deg2rad(endDeg + offset);
+    const x1 = CX + SECTOR_RADIUS * Math.cos(startRad);
+    const y1 = CY + SECTOR_RADIUS * Math.sin(startRad);
+    const x2 = CX + SECTOR_RADIUS * Math.cos(endRad);
+    const y2 = CY + SECTOR_RADIUS * Math.sin(endRad);
+    const largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
+    const path = `<path d="M${CX},${CY} L${x1},${y1} A${SECTOR_RADIUS},${SECTOR_RADIUS} 0 ${largeArc},1 ${x2},${y2} Z" fill="${fill}" stroke="#fff" stroke-width="0.8"/>`;
+    if(!showText) return path;
+    const midDeg = startDeg + (endDeg - startDeg)/2;
+    const midRad = deg2rad(midDeg + offset);
+    const tx = CX + SECTOR_RADIUS * 0.62 * Math.cos(midRad);
+    const ty = CY + SECTOR_RADIUS * 0.62 * Math.sin(midRad);
+    return path + `<text x="${tx}" y="${ty}" fill="#000" font-size="${fontSize}" text-anchor="middle" transform="rotate(${midDeg},${tx},${ty})">${text}</text>`;
+}
+
+startBtn.onclick = function(){
+    if(rotating) return;
+    rotating = true;
+    startBtn.disabled = true;
+    resultDom.style.opacity = "0";
+    resultDom.innerText = "";
+    const total = songList.length;
+    const sliceDeg = 360 / total;
+    //随机旋转总圈数
+    const randomRotate = 360 * (6 + Math.random() * 5);
+    const finalRotate = lastDeg + randomRotate;
+    wheelDom.style.transform = `rotate(${finalRotate}deg)`;
+    lastDeg = finalRotate;
+
+    setTimeout(()=>{
+        rotating = false;
+        startBtn.disabled = false;
+        // 核心：根据当前旋转角度，实时计算指针指向哪一块扇形
+        let currentAngle = lastDeg % 360;
+        // 指针固定在顶部0度位置，转盘顺时针旋转，角度反向换算
+        let pointerAngle = (360 - currentAngle + 360) % 360;
+        let targetIndex = Math.floor(pointerAngle / sliceDeg);
+        //边界修正
+        if(targetIndex >= total) targetIndex = total -1;
+        const pick = songList[targetIndex];
+        resultDom.innerText = `选中歌曲：${pick["歌曲名称"]} | ${pick["歌曲版本"]}`;
+        resultDom.style.opacity = "1";
+    }, 4000)
+}
+init();
+</script>
+</body>
+</html>

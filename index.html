@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歌单列表</title>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+    	    min-height: 100vh;
+    	    /* 上下渐变：深蓝 → 黑色 */
+    	    background: radial-gradient(circle at center, #182244, #000000);
+    	    padding: 30px 15px;
+        }
+        .glass-box {
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding: 24px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+        .glass-box:hover {
+            background: rgba(255, 255, 255, 0.22);
+        }
+        .filter-row {
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 0;
+        }
+        .filter-item {
+            flex: 1;
+            min-width: 180px;
+            position: relative;
+        }
+        .filter-item label {
+            color: #fff;
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .btn-row{
+            display:flex;
+            gap:6px;
+        }
+        .dropdown-toggle {
+            flex:1;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: 15px;
+            background: #222831;
+            color: #ffffff;
+            text-align: left;
+            cursor: pointer;
+        }
+        .clear-select-btn{
+            padding:0 12px;
+            border-radius:8px;
+            border:none;
+            background:#555b66;
+            color:#fff;
+            cursor:pointer;
+        }
+        .global-dropdown-panel {
+            position: fixed;
+            width: calc(180px + 14px);
+            max-height: 260px;
+            overflow-y: auto;
+            background: #393E46;
+            border-radius: 8px;
+            z-index: 9999999 !important;
+            padding: 6px;
+            display: none;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        }
+        .global-dropdown-panel::-webkit-scrollbar {
+            display: none;
+        }
+        .global-dropdown-panel {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .global-dropdown-panel.show {
+            display: block;
+        }
+        .dropdown-item {
+            color: #fff;
+            padding: 8px 10px;
+            cursor: pointer;
+            border-radius: 6px;
+            margin-bottom: 2px;
+            transition: background 0.15s ease;
+        }
+        .dropdown-item:hover {
+            background: #5c6370;
+        }
+        .dropdown-item.active {
+            background: #2d6cdf;
+            color: #fff;
+            font-weight: 500;
+        }
+        .search-wrap-inline {
+            flex:1;
+            min-width:180px;
+            position:relative;
+        }
+        .search-wrap-inline label{
+            color:#fff;
+            display:block;
+            margin-bottom:8px;
+            font-weight:bold;
+        }
+        .search-input-box{
+            position:relative;
+        }
+        #search-input {
+            width: 100%;
+            padding: 10px 38px 10px 14px;
+            border-radius: 8px;
+            border: none;
+            font-size: 15px;
+            outline: none;
+            transition: box-shadow 0.25s;
+        }
+        #search-input:focus {
+            box-shadow: 0 0 0 3px rgba(65, 114, 159, 0.4);
+        }
+        #search-input::placeholder {
+            color: #999;
+        }
+        .search-icon{
+            position:absolute;
+            right:12px;
+            top:50%;
+            transform:translateY(-50%);
+            color:#666;
+            font-size:18px;
+            cursor: pointer;
+            pointer-events:none;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            color: #fff;
+            margin-top:24px;
+        }
+        th, td {
+            padding: 14px 10px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+        }
+        th {
+            background: rgba(0,0,0,0.3);
+        }
+        .table-wrap {
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        .table-wrap.fade-out {
+            opacity: 0;
+        }
+        .page-box {
+            display: flex;
+            justify-content: center;
+            gap:10px;
+            margin-top:20px;
+        }
+        button {
+            padding: 9px 18px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            font-size:15px;
+            background: #41729F;
+            color:#fff;
+            transition: all 0.2s ease;
+        }
+        button:hover:not(:disabled) {
+            filter: brightness(1.15);
+        }
+        button:disabled{
+            background:#666;
+            cursor:not-allowed;
+            filter:none;
+        }
+        .bottom-btn-area{
+            text-align:center;
+            margin-top:30px;
+        }
+        #to-wheel{
+            background:#27ae60;
+            padding:12px 30px;
+            font-size:17px;
+        }
+        .empty-tip{
+            text-align:center;
+            color:#fff;
+            padding:40px;
+            font-size:16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="global-dropdown-panel" id="globalPanel"></div>
+
+    <div class="glass-box">
+        <div class="filter-row">
+            <div class="filter-item" data-type="style">
+                <label>主风格</label>
+                <div class="btn-row">
+                    <button class="dropdown-toggle">选择风格 ▾</button>
+                    <button class="clear-select-btn">清除</button>
+                </div>
+            </div>
+            <div class="filter-item" data-type="lang">
+                <label>歌曲语种</label>
+                <div class="btn-row">
+                    <button class="dropdown-toggle">选择语种 ▾</button>
+                    <button class="clear-select-btn">清除</button>
+                </div>
+            </div>
+            <div class="filter-item" data-type="version">
+                <label>歌曲版本</label>
+                <div class="btn-row">
+                    <button class="dropdown-toggle">选择版本 ▾</button>
+                    <button class="clear-select-btn">清除</button>
+                </div>
+            </div>
+            <div class="search-wrap-inline">
+                <label>搜索歌曲</label>
+                <div class="search-input-box">
+                    <input id="search-input" type="text" placeholder="可搜索歌名 / 歌手">
+                    <span class="search-icon">🔍</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="glass-box table-wrap" id="tableContainer">
+        <table>
+            <thead>
+                <tr>
+                    <th>歌曲名称</th>
+                    <th>歌曲版本</th>
+                    <th>主风格</th>
+                    <th>歌曲语种</th>
+                </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+        </table>
+        <div id="empty-text" class="empty-tip" style="display:none;">暂无匹配歌曲</div>
+        <div class="page-box">
+            <button id="prev">上一页</button>
+            <span id="page-info" style="color:#fff;line-height:38px;margin:0 12px;"></span>
+            <button id="next">下一页</button>
+        </div>
+    </div>
+
+    <div class="bottom-btn-area">
+        <button id="to-wheel">前往歌曲转盘</button>
+    </div>
+
+<script>
+let allData = [];
+let filterData = [];
+const pageSize = 10;
+let currentPage = 1;
+const selected = {
+    style: null,
+    lang: null,
+    version: null
+};
+let currentOpenType = null;
+const globalPanel = document.getElementById("globalPanel");
+
+const searchInput = document.getElementById("search-input");
+const tableBody = document.getElementById("table-body");
+const emptyText = document.getElementById("empty-text");
+const pageInfo = document.getElementById("page-info");
+const prevBtn = document.getElementById("prev");
+const nextBtn = document.getElementById("next");
+const toWheelBtn = document.getElementById("to-wheel");
+const tableContainer = document.getElementById("tableContainer");
+
+function debounce(fn, delay=180){
+    let timer;
+    return (...args)=>{
+        clearTimeout(timer);
+        timer = setTimeout(()=>fn(...args), delay);
+    }
+}
+
+async function loadExcel(){
+    const res = await fetch("最新歌单.xlsx");
+    const buf = await res.arrayBuffer();
+    const workbook = XLSX.read(buf);
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    allData = XLSX.utils.sheet_to_json(sheet);
+    initDropdownData();
+    filterChange();
+}
+function initDropdownData(){
+    const styles = [...new Set(allData.map(i=>{
+        const s = String(i["主风格"]||"").split("/")[0];
+        return s;
+    }).filter(Boolean))].sort();
+    const langs = [...new Set(allData.map(i=>i["歌曲语种"]).filter(Boolean))].sort();
+    const versions = [...new Set(allData.map(i=>i["歌曲版本"]).filter(Boolean))].sort();
+    window.dropSource = {style:styles,lang:langs,version:versions};
+}
+function renderPanel(type){
+    const arr = window.dropSource[type];
+    globalPanel.innerHTML = "";
+    arr.forEach(val=>{
+        const div = document.createElement("div");
+        div.className = "dropdown-item";
+        div.dataset.val = val;
+        div.innerText = val;
+        if(selected[type] === val) div.classList.add("active");
+        div.onclick = (e)=>{
+            e.stopPropagation();
+            selected[type] = selected[type] === val ? null : val;
+            updateLabel(type);
+            filterChange();
+            closePanel();
+        }
+        globalPanel.appendChild(div);
+    })
+}
+function updateLabel(type){
+    const wrap = document.querySelector(`.filter-item[data-type="${type}"]`);
+    const btn = wrap.querySelector(".dropdown-toggle");
+    const map = {style:"风格",lang:"语种",version:"版本"};
+    if(selected[type] === null){
+        btn.innerText = `选择${map[type]} ▾`;
+    }else{
+        btn.innerText = `${selected[type]} ▾`;
+    }
+}
+function openPanel(type, triggerEl){
+    currentOpenType = type;
+    renderPanel(type);
+    const rect = triggerEl.getBoundingClientRect();
+    globalPanel.style.left = rect.left + "px";
+    globalPanel.style.top = (rect.bottom + 8) + "px";
+    globalPanel.classList.add("show");
+}
+function closePanel(){
+    globalPanel.classList.remove("show");
+    currentOpenType = null;
+}
+document.querySelectorAll(".dropdown-toggle").forEach(btn=>{
+    btn.onclick = (e)=>{
+        e.stopPropagation();
+        const itemWrap = btn.closest(".filter-item");
+        const type = itemWrap.dataset.type;
+        if(currentOpenType === type){
+            closePanel();
+        }else{
+            openPanel(type, btn);
+        }
+    }
+})
+document.querySelectorAll(".clear-select-btn").forEach(btn=>{
+    btn.onclick = (e)=>{
+        e.stopPropagation();
+        const itemWrap = btn.closest(".filter-item");
+        const type = itemWrap.dataset.type;
+        selected[type] = null;
+        updateLabel(type);
+        filterChange();
+    }
+})
+document.addEventListener("click",()=>closePanel());
+
+const filterChange = debounce(()=>{
+    const keyword = searchInput.value.trim().toLowerCase();
+    filterData = allData.filter(item=>{
+        // 风格：前缀匹配 Emo 匹配 Emo、Emo/高音、Emo/低音
+        if(selected.style){
+            const itemStyle = String(item["主风格"]||"");
+            if(!itemStyle.startsWith(selected.style)) return false;
+        }
+        // 语种、版本严格相等
+        if(selected.lang && item["歌曲语种"] !== selected.lang) return false;
+        if(selected.version && item["歌曲版本"] !== selected.version) return false;
+        if(keyword){
+            const name = String(item["歌曲名称"]||"").toLowerCase();
+            const ver = String(item["歌曲版本"]||"").toLowerCase();
+            if(!name.includes(keyword) && !ver.includes(keyword)) return false;
+        }
+        return true;
+    })
+    currentPage = 1;
+    renderTable();
+})
+
+function renderTable(){
+    tableContainer.classList.add("fade-out");
+    setTimeout(()=>{
+        const total = filterData.length;
+        const totalPage = Math.ceil(total / pageSize);
+        const start = (currentPage -1)*pageSize;
+        const pageList = filterData.slice(start, start + pageSize);
+
+        if(total ===0){
+            tableBody.innerHTML = "";
+            emptyText.style.display = "block";
+        }else{
+            emptyText.style.display = "none";
+            tableBody.innerHTML = pageList.map(row=>`
+                <tr>
+                    <td>${row["歌曲名称"]||""}</td>
+                    <td>${row["歌曲版本"]||""}</td>
+                    <td>${row["主风格"]||""}</td>
+                    <td>${row["歌曲语种"]||""}</td>
+                </tr>
+            `).join("");
+        }
+        pageInfo.innerText = `第${currentPage}/${totalPage||1}页 共${total}首`;
+        prevBtn.disabled = currentPage <=1;
+        nextBtn.disabled = currentPage >= totalPage;
+        tableContainer.classList.remove("fade-out");
+    },220)
+}
+
+searchInput.addEventListener("input", filterChange);
+prevBtn.onclick = ()=>{
+    if(currentPage>1){currentPage--;renderTable();}
+}
+nextBtn.onclick = ()=>{
+    const totalPage = Math.ceil(filterData.length / pageSize);
+    if(currentPage < totalPage){currentPage++;renderTable();}
+}
+toWheelBtn.onclick = ()=>{
+    localStorage.setItem("wheelSongList", JSON.stringify(filterData));
+    location.href = "wheel.html";
+}
+loadExcel();
+</script>
+</body>
+</html>

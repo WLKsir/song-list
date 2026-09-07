@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>歌曲转盘</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            min-height:100vh;
+            background: radial-gradient(circle at center, #182244, #000000);
+            padding:20px;
+        }
+        /* 页面主标题 */
+        .page-title {
+            text-align: center;
+            font-size: 28px;
+            color: #fff;
+            letter-spacing: 2px;
+            margin: 0 0 36px;
+            background: linear-gradient(90deg, #ffe066, #ff7b7b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 12px rgba(255, 180, 80, 0.3);
+        }
+        .glass-box {
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            padding:24px;
+            margin: 20px auto;
+            max-width:700px;
+            transition: all 0.3s ease;
+        }
+        .glass-box:hover {
+            transform: translateY(-4px);
+            border-color: rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 30px rgba(100, 140, 255, 0.15);
+        }
+.topbar {
+    width: 100%;
+    max-width: 700px;
+    margin: 0 auto 24px;
+    text-align: right;
+}
+
+	.back-btn {
+  	   padding: 8px 0;
+  	   border: none;
+  	   background: transparent;
+	   color: rgba(180, 220, 255, 0.9);
+ 	   cursor: pointer;
+ 	   font-size: 15px;
+ 	   font-weight: 500;
+ 	   letter-spacing: 0.5px;
+ 	   transition: all 0.2s ease;
+ 	   text-shadow: 0 0 8px rgba(80, 145, 210, 0.8),
+	                 0 0 16px rgba(80, 145, 210, 0.5);
+	}
+	
+	.back-btn:hover {
+	    color: #ffffff;
+	    text-shadow: 0 0 12px rgba(80, 145, 210, 1),
+	                 0 0 24px rgba(80, 145, 210, 0.8);
+	    transform: translateX(-2px);
+	}
+        .container{
+            text-align:center;
+            margin-top:30px;
+        }
+        #wheel-box{
+            width: min(65vw, 420px);
+            height: min(65vw, 420px);
+            margin:0 auto 30px;
+            position:relative;
+        }
+        #wheel{
+            width: 100%;
+            height: 100%;
+            border-radius:50%;
+            transition: transform 4s cubic-bezier(0.2,0.8,0.2,1);
+            position:relative;
+            overflow:hidden;
+            background:#ffffff;
+            transform-origin: 50% 50% !important;
+        }
+        /* 转盘转动发光动画 */
+        #wheel.rolling {
+            box-shadow: 0 0 25px rgba(255, 160, 60, 0.6);
+        }
+        .pointer{
+            width: 0;
+            height: 0;
+            border-left: 16px solid transparent;
+            border-right: 16px solid transparent;
+            border-top: 32px solid #ff4757;
+            position:absolute;
+            left:50%;
+            top:-12px;
+            transform:translateX(-50%);
+            z-index:99;
+            filter: drop-shadow(0 3px 4px rgba(0,0,0,0.4));
+        }
+        /* 指针停止抖动动画 */
+        @keyframes pointerShake {
+            0%,100% {transform: translateX(-50%) rotate(0deg);}
+            25% {transform: translateX(-50%) rotate(6deg);}
+            75% {transform: translateX(-50%) rotate(-6deg);}
+        }
+        .pointer-shake {
+            animation: pointerShake 0.4s ease-out;
+        }
+        #start-btn{
+            padding:14px 36px;
+            font-size:18px;
+            font-weight: 500;
+            border:none;
+            border-radius:10px;
+            background:#e67e22;
+            color:#fff;
+            cursor:pointer;
+            transition: all 0.2s;
+        }
+        #start-btn:active {
+            transform: scale(0.96);
+        }
+        #start-btn:disabled{
+            background:#666;
+            cursor:not-allowed;
+            filter:none;
+            transform: none;
+        }
+        #start-btn:not(:disabled):hover{
+            filter: brightness(1.15);
+            transform: scale(1.04);
+            box-shadow: 0 4px 15px rgba(230, 126, 34, 0.4);
+        }
+        .result-text{
+            color:#fff;
+            font-size:22px;
+            font-weight: 500;
+            margin-top:24px;
+            min-height:36px;
+            transition: opacity 0.3s ease;
+            letter-spacing: 1px;
+        }
+        .result-text strong {
+            color: #ffc370;
+            text-shadow: 0 0 8px rgba(255, 195, 112, 0.4);
+        }
+        .tip-text{
+            color:rgba(255,255,255,0.85);
+            margin:12px 0;
+            font-size: 16px;
+            letter-spacing: 1px;
+        }
+        .tip-text.warn {
+            color: #ff9494;
+            text-shadow: 0 0 6px rgba(255, 100, 100, 0.3);
+        }
+        .desc-text {
+            margin-top: 14px;
+            color: rgba(255,255,255,0.55);
+            font-size: 14px;
+        }
+        /* 弹窗遮罩 */
+        .modal-mask {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        .modal-mask.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        /* 开奖弹窗 */
+        .modal-box {
+            background: rgba(30, 38, 66, 0.92);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.22);
+            border-radius: 20px;
+            padding: 36px 32px;
+            width: min(90vw, 420px);
+            text-align: center;
+            transform: scale(0.8);
+            transition: transform 0.3s cubic-bezier(0.2,0.8,0.2,1);
+        }
+        .modal-mask.show .modal-box {
+            transform: scale(1);
+        }
+        .modal-title {
+            font-size: 26px;
+            color: #ffe066;
+            margin-bottom: 16px;
+        }
+        .modal-song-name {
+            font-size: 22px;
+            color: #fff;
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+        .modal-song-name span {
+            color: #ffc370;
+            font-weight: bold;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+        }
+        .modal-btn {
+            padding: 10px 24px;
+            border-radius: 8px;
+            border: none;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .modal-btn.again {
+            background: #e67e22;
+            color: #fff;
+        }
+        .modal-btn.close {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+        .modal-btn:hover {
+            filter: brightness(1.15);
+            transform: scale(1.03);
+        }
+    </style>
+</head>
+<body>
+    <div class="topbar">
+    <button class="back-btn" onclick="location.href='index.html'">← 返回歌单</button>
+    </div>
+
+    <h1 class="page-title">随机歌曲抽取转盘</h1>
+
+    <div class="glass-box container">
+        <div class="tip-text" id="list-tip"></div>
+        <div id="wheel-box">
+            <div class="pointer" id="pointer"></div>
+            <div id="wheel"></div>
+        </div>
+        <button id="start-btn">开始转动</button>
+        <div class="result-text" id="result"></div>
+        <p class="desc-text">空格键快速抽取 | 转盘停止后弹出开奖结果</p>
+    </div>
+
+    <!-- 开奖弹窗 -->
+    <div class="modal-mask" id="modalMask">
+        <div class="modal-box">
+            <div class="modal-title">🎉 恭喜抽中歌曲</div>
+            <div class="modal-song-name" id="modalSong"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn again" id="modalAgain">再来一次</button>
+                <button class="modal-btn close" id="modalClose">关闭</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+const wheelDom = document.getElementById("wheel");
+const startBtn = document.getElementById("start-btn");
+const resultDom = document.getElementById("result");
+const tipDom = document.getElementById("list-tip");
+const pointerDom = document.getElementById("pointer");
+const modalMask = document.getElementById("modalMask");
+const modalSong = document.getElementById("modalSong");
+const modalAgain = document.getElementById("modalAgain");
+const modalClose = document.getElementById("modalClose");
+
+let songList = [];
+let rotating = false;
+let lastDeg = 0;
+const MAX_CAPACITY = 1000;
+const SCALE_THRESHOLD = 20;
+const HIDE_TEXT_THRESHOLD = 40;
+
+// 获取转盘实时尺寸，动态计算圆心、半径
+function getWheelSize(){
+    const box = document.getElementById("wheel-box");
+    const size = box.clientWidth;
+    const CX = size / 2;
+    const CY = size / 2;
+    const OUTER_RADIUS = size / 2 - 8;
+    const SECTOR_RADIUS = size / 2 - 16;
+    return {CX, CY, OUTER_RADIUS, SECTOR_RADIUS, size};
+}
+
+function init(){
+    const str = localStorage.getItem("wheelSongList");
+    if(!str){
+        tipDom.innerText = "暂无歌曲，请先前往歌单页面筛选！";
+        tipDom.classList.add("warn");
+        startBtn.disabled = true;
+        return;
+    }
+    songList = JSON.parse(str);
+    if(songList.length ===0){
+        tipDom.innerText = "筛选结果为空！";
+        tipDom.classList.add("warn");
+        startBtn.disabled = true;
+        return;
+    }
+    tipDom.classList.remove("warn");
+    if(songList.length > MAX_CAPACITY){
+        alert(`歌曲数量超过上限${MAX_CAPACITY}首，仅加载前${MAX_CAPACITY}首`);
+        songList = songList.slice(0, MAX_CAPACITY);
+    }
+    tipDom.innerText = `转盘载入歌曲：${songList.length}首`;
+    drawWheel();
+}
+function drawWheel(){
+    const total = songList.length;
+    const sliceDeg = 360 / total;
+    const colors = ["#ff6b6b","#4ecdc4","#45b7d1","#ffe066","#a8e6cf","#ffd3a5","#c9b1ff","#ffacc5"];
+    const {CX, CY, OUTER_RADIUS, SECTOR_RADIUS, size} = getWheelSize();
+
+    let html = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
+
+    html += `
+<defs>
+    <clipPath id="wheelTextClip">
+        <circle cx="${CX}" cy="${CY}" r="${SECTOR_RADIUS * 0.92}" />
+    </clipPath>
+</defs>
+`;
+
+    let fontSize = 12;
+    if(total > SCALE_THRESHOLD) fontSize = Math.max(5, 12 - (total - SCALE_THRESHOLD) * 0.3);
+    const showText = total <= HIDE_TEXT_THRESHOLD;
+
+    html += `<g clip-path="url(#wheelTextClip)">`;
+
+    for(let i = 0; i < total; i++){
+        const start = sliceDeg * i;
+        const end = sliceDeg * (i + 1);
+        const color = colors[i % colors.length];
+        html += createSlice(start, end, color, songList[i]["歌曲名称"], fontSize, showText, CX, CY, SECTOR_RADIUS);
+    }
+
+    html += `</g>`;
+
+    html += `<circle cx="${CX}" cy="${CY}" r="${OUTER_RADIUS}" fill="none" stroke="#ffffff" stroke-width="12" />`;
+    html += `</svg>`;
+
+    wheelDom.innerHTML = html;
+}
+
+function createSlice(startDeg, endDeg, fill, text, fontSize, showText, CX, CY, SECTOR_RADIUS){
+    const deg2rad = d => d * Math.PI / 180;
+    const offset = -90;
+
+    const startRad = deg2rad(startDeg + offset);
+    const endRad = deg2rad(endDeg + offset);
+
+    const x1 = CX + SECTOR_RADIUS * Math.cos(startRad);
+    const y1 = CY + SECTOR_RADIUS * Math.sin(startRad);
+    const x2 = CX + SECTOR_RADIUS * Math.cos(endRad);
+    const y2 = CY + SECTOR_RADIUS * Math.sin(endRad);
+
+    const largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
+
+    const path = `<path d="M${CX},${CY} L${x1},${y1} A${SECTOR_RADIUS},${SECTOR_RADIUS} 0 ${largeArc},1 ${x2},${y2} Z" fill="${fill}" stroke="#fff" stroke-width="0.8" />`;
+
+    if(!showText) return path;
+
+    const midDeg = startDeg + (endDeg - startDeg) / 2;
+    const midRad = deg2rad(midDeg + offset);
+
+    const textRadius = SECTOR_RADIUS * 0.58;
+    const tx = CX + textRadius * Math.cos(midRad);
+    const ty = CY + textRadius * Math.sin(midRad);
+
+    const maxArcWidth = Math.abs(endRad - startRad) * textRadius;
+    const maxWidth = Math.max(fontSize * 1.5, maxArcWidth - fontSize * 0.8);
+
+    let displayText = text || "";
+
+    // 简单截断，避免长文字挤爆扇形
+    if(displayText.length > 12){
+        displayText = displayText.slice(0, 11) + "…";
+    }
+
+    return path + `
+<text x="${tx}" y="${ty}"
+      fill="#ffffff"
+      font-size="${fontSize}"
+      text-anchor="middle"
+      dominant-baseline="middle"
+      transform="rotate(${midDeg},${tx},${ty})"
+      style="
+          text-shadow: 0 1px 3px rgba(0,0,0,0.75);
+          max-width: ${maxWidth}px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+      ">
+      ${displayText}
+</text>
+`;
+}
+
+// 执行抽奖逻辑
+function runDraw() {
+    if(rotating) return;
+    rotating = true;
+    startBtn.disabled = true;
+    startBtn.innerText = "转动中…";
+    resultDom.style.opacity = "0";
+    resultDom.innerText = "";
+    wheelDom.classList.add("rolling");
+
+    const total = songList.length;
+    const sliceDeg = 360 / total;
+    const randomRotate = 360 * (6 + Math.random() * 5);
+    const finalRotate = lastDeg + randomRotate;
+    wheelDom.style.transform = `rotate(${finalRotate}deg)`;
+    lastDeg = finalRotate;
+
+    setTimeout(()=>{
+        rotating = false;
+        startBtn.disabled = false;
+        startBtn.innerText = "开始转动";
+        wheelDom.classList.remove("rolling");
+        // 指针抖动动画
+        pointerDom.classList.add("pointer-shake");
+        setTimeout(()=>pointerDom.classList.remove("pointer-shake"),400);
+
+        // 计算选中歌曲
+        let currentAngle = lastDeg % 360;
+        let pointerAngle = (360 - currentAngle + 360) % 360;
+        let targetIndex = Math.floor(pointerAngle / sliceDeg);
+        if(targetIndex >= total) targetIndex = total -1;
+        const pick = songList[targetIndex];
+        const showStr = `选中歌曲：<strong>${pick["歌曲名称"]}</strong> | ${pick["歌曲版本"]}`;
+        resultDom.innerHTML = showStr;
+        resultDom.style.opacity = "1";
+
+        // 弹出开奖模态弹窗
+        modalSong.innerHTML = `歌曲：<span>${pick["歌曲名称"]}</span><br>版本：${pick["歌曲版本"]}`;
+        modalMask.classList.add("show");
+    }, 4000)
+}
+
+startBtn.onclick = runDraw;
+
+// 弹窗关闭
+modalClose.onclick = () => modalMask.classList.remove("show");
+modalMask.onclick = (e) => {
+    if(e.target === modalMask) modalMask.classList.remove("show");
+}
+// 再来一次
+modalAgain.onclick = () => {
+    modalMask.classList.remove("show");
+    setTimeout(runDraw, 300);
+}
+
+// 键盘快捷键：空格抽奖
+window.addEventListener("keydown", (e) => {
+    if(e.code === "Space") {
+        e.preventDefault();
+        runDraw();
+    }
+});
+
+// 窗口缩放重绘转盘
+window.addEventListener("resize", ()=>{
+    if(songList.length > 0){
+        drawWheel();
+    }
+});
+
+init();
+</script>
+</body>
+</html>
