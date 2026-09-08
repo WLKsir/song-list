@@ -222,6 +222,27 @@
                     <button class="clear-select-btn">清除</button>
                 </div>
             </div>
+            <div class="filter-item" data-type="emotion">
+                <label>情绪</label>
+                <div class="btn-row">
+                    <button class="dropdown-toggle">选择情绪 ▾</button>
+                    <button class="clear-select-btn">清除</button>
+                </div>
+            </div>
+            <div class="filter-item" data-type="range">
+                <label>音域</label>
+                <div class="btn-row">
+                    <button class="dropdown-toggle">选择音域 ▾</button>
+                    <button class="clear-select-btn">清除</button>
+                </div>
+            </div>
+            <div class="filter-item" data-type="sub">
+                <label>子类</label>
+                <div class="btn-row">
+                    <button class="dropdown-toggle">选择子类 ▾</button>
+                    <button class="clear-select-btn">清除</button>
+                </div>
+            </div>
             <div class="filter-item" data-type="lang">
                 <label>歌曲语种</label>
                 <div class="btn-row">
@@ -253,6 +274,7 @@
                     <th>歌曲名称</th>
                     <th>歌曲版本</th>
                     <th>主风格</th>
+                    <th>情绪</th>
                     <th>歌曲语种</th>
                 </tr>
             </thead>
@@ -277,6 +299,9 @@ const pageSize = 10;
 let currentPage = 1;
 const selected = {
     style: null,
+    emotion: null,
+    range: null,
+    sub: null,
     lang: null,
     version: null
 };
@@ -300,23 +325,66 @@ function debounce(fn, delay=180){
     }
 }
 
-async function loadExcel(){
-    const res = await fetch("最新歌单.xlsx");
-    const buf = await res.arrayBuffer();
-    const workbook = XLSX.read(buf);
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    allData = XLSX.utils.sheet_to_json(sheet);
-    initDropdownData();
-    filterChange();
+// 依次尝试，兼容拆分前后的文件名
+const DATA_FILES = ["最新歌单_风格拆分.xlsx", "最新歌单.xlsx"];
+
+function str(v){ return String(v ?? "").trim(); }
+function splitVals(v){ return str(v).split("、").map(x=>x.trim()).filter(Boolean); }
+
+// 统计某列各取值出现次数（子类等列可能用「、」存多个值）
+function countBy(colName){
+    const m = new Map();
+    allData.forEach(i=>{
+        splitVals(i[colName]).forEach(x=> m.set(x, (m.get(x)||0)+1));
+    });
+    return m;
 }
+// 按出现频次降序
+function byFreq(colName){
+    return [...countBy(colName).entries()]
+        .sort((a,b)=> b[1]-a[1] || a[0].localeCompare(b[0],"zh-CN"))
+        .map(e=>e[0]);
+}
+// 指定顺序优先，其余按拼音追加
+function byOrder(colName, order){
+    const m = countBy(colName);
+    const rest = [...m.keys()].filter(k=>!order.includes(k))
+                              .sort((a,b)=>a.localeCompare(b,"zh-CN"));
+    return [...order.filter(k=>m.has(k)), ...rest];
+}
+
+const LANG_ORDER = ["国语","粤语","日语","英语"];
+const RANGE_ORDER = ["高音","低音"];
+
 function initDropdownData(){
-    const styles = [...new Set(allData.map(i=>{
-        const s = String(i["主风格"]||"").split("/")[0];
-        return s;
-    }).filter(Boolean))].sort();
-    const langs = [...new Set(allData.map(i=>i["歌曲语种"]).filter(Boolean))].sort();
-    const versions = [...new Set(allData.map(i=>i["歌曲版本"]).filter(Boolean))].sort();
-    window.dropSource = {style:styles,lang:langs,version:versions};
+    window.dropSource = {
+        style:   byFreq("主风格"),
+        emotion: byFreq("情绪"),
+        range:   byOrder("音域", RANGE_ORDER),
+        sub:     byFreq("子类"),
+        lang:    byOrder("歌曲语种", LANG_ORDER),
+        version: [...countBy("歌曲版本").keys()].sort((a,b)=>a.localeCompare(b,"zh-CN"))
+    };
+}
+
+async function loadExcel(){
+    for(const file of DATA_FILES){
+        try{
+            const res = await fetch(file);
+            if(!res.ok) continue;
+            const buf = await res.arrayBuffer();
+            const workbook = XLSX.read(buf);
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            allData = XLSX.utils.sheet_to_json(sheet);
+            initDropdownData();
+            filterChange();
+            return;
+        }catch(e){
+            console.warn("歌单读取失败:", file, e);
+        }
+    }
+    emptyText.style.display = "block";
+    emptyText.innerText = "歌单文件加载失败，请确认 xlsx 与本页在同一目录";
 }
 function renderPanel(type){
     const arr = window.dropSource[type];
@@ -340,7 +408,7 @@ function renderPanel(type){
 function updateLabel(type){
     const wrap = document.querySelector(`.filter-item[data-type="${type}"]`);
     const btn = wrap.querySelector(".dropdown-toggle");
-    const map = {style:"风格",lang:"语种",version:"版本"};
+    const map = {style:"风格",emotion:"情绪",range:"音域",sub:"子类",lang:"语种",version:"版本"};
     if(selected[type] === null){
         btn.innerText = `选择${map[type]} ▾`;
     }else{
@@ -386,14 +454,13 @@ document.addEventListener("click",()=>closePanel());
 const filterChange = debounce(()=>{
     const keyword = searchInput.value.trim().toLowerCase();
     filterData = allData.filter(item=>{
-        // 风格：前缀匹配 Emo 匹配 Emo、Emo/高音、Emo/低音
-        if(selected.style){
-            const itemStyle = String(item["主风格"]||"");
-            if(!itemStyle.startsWith(selected.style)) return false;
-        }
-        // 语种、版本严格相等
-        if(selected.lang && item["歌曲语种"] !== selected.lang) return false;
-        if(selected.version && item["歌曲版本"] !== selected.version) return false;
+        // 新表每列都是单值，直接严格相等；子类按「、」拆开兼容多值
+        if(selected.style && str(item["主风格"]) !== selected.style) return false;
+        if(selected.emotion && str(item["情绪"]) !== selected.emotion) return false;
+        if(selected.range && str(item["音域"]) !== selected.range) return false;
+        if(selected.sub && !splitVals(item["子类"]).includes(selected.sub)) return false;
+        if(selected.lang && str(item["歌曲语种"]) !== selected.lang) return false;
+        if(selected.version && str(item["歌曲版本"]) !== selected.version) return false;
         if(keyword){
             const name = String(item["歌曲名称"]||"").toLowerCase();
             const ver = String(item["歌曲版本"]||"").toLowerCase();
@@ -420,10 +487,11 @@ function renderTable(){
             emptyText.style.display = "none";
             tableBody.innerHTML = pageList.map(row=>`
                 <tr>
-                    <td>${row["歌曲名称"]||""}</td>
-                    <td>${row["歌曲版本"]||""}</td>
-                    <td>${row["主风格"]||""}</td>
-                    <td>${row["歌曲语种"]||""}</td>
+                    <td>${str(row["歌曲名称"])}</td>
+                    <td>${str(row["歌曲版本"])}</td>
+                    <td>${str(row["主风格"])}</td>
+                    <td>${str(row["情绪"])}</td>
+                    <td>${str(row["歌曲语种"])}</td>
                 </tr>
             `).join("");
         }
