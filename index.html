@@ -6,34 +6,99 @@
     <title>歌单列表</title>
     <script src="xlsx.full.min.js"></script>
     <style>
+        /* ===== Semi Design Tokens (Dark Mode 映射) ===== */
+        /* 主题 A：极光青紫（默认） */
+        :root {
+            --bg-inner: #0B1226;
+            --bg-outer: #04060D;
+            --card: rgba(23, 32, 59, 0.72);
+            --card-hover: rgba(28, 39, 72, 0.85);
+            --accent: #2DE1C2;
+            --accent-hover: #5CEBD3;
+            --accent-contrast: #04261F;
+            --text-0: #F9F9F9;
+            --text-1: rgba(249,249,249,0.8);
+            --text-2: rgba(249,249,249,0.6);
+            --bg-2: #2E3035;
+            --fill-0: rgba(255,255,255,0.12);
+            --fill-1: rgba(255,255,255,0.16);
+            --fill-2: rgba(255,255,255,0.20);
+            --border: rgba(255,255,255,0.10);
+            --card-border: rgba(255,255,255,0.18);
+            --th-bg: rgba(0,0,0,0.3);
+            --radius-small: 3px;
+            --radius-medium: 6px;
+            --radius-large: 12px;
+            --font-stack: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+        /* 主题 B：落日暖调（明亮暖色浅色调） */
+        html[data-theme="B"] {
+            --bg-inner: #FFF3E2;
+            --bg-outer: #FFDDB8;
+            --card: rgba(255, 224, 189, 0.78);
+            --card-hover: rgba(255, 233, 205, 0.92);
+            --card-border: rgba(150, 82, 30, 0.22);
+            --th-bg: rgba(255, 107, 53, 0.16);
+            --accent: #FF6B35;
+            --accent-hover: #FF8533;
+            --accent-contrast: #FFFFFF;
+            --text-0: #3D2314;
+            --text-1: rgba(61, 35, 20, 0.8);
+            --text-2: rgba(61, 35, 20, 0.6);
+            --bg-2: #FFF1E0;
+            --fill-0: rgba(120, 65, 20, 0.08);
+            --fill-1: rgba(120, 65, 20, 0.13);
+            --fill-2: rgba(120, 65, 20, 0.18);
+            --border: rgba(120, 65, 20, 0.15);
+        }
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft Yahei", sans-serif;
+            font-family: var(--font-stack);
         }
         body {
-    	    min-height: 100vh;
-    	    /* 上下渐变：深蓝 → 黑色 */
-    	    background: radial-gradient(circle at center, #182244, #000000);
-    	    padding: 30px 15px;
+            min-height: 100vh;
+            /* 主题化径向渐变背景 */
+            background: radial-gradient(circle at center, var(--bg-inner), var(--bg-outer)) fixed;
+            padding: 30px 15px;
+            color: var(--text-0);
         }
+        /* 顶部工具条 */
+        .topbar {
+            max-width: 1100px;
+            margin: 0 auto 12px;
+            display: flex;
+            justify-content: flex-end;
+        }
+        .theme-toggle::before {
+            content: "";
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-right: 8px;
+            vertical-align: -1px;
+        }
+        /* 卡片：去掉 backdrop-filter（大面积模糊是掉帧主因），
+           改用半透明纯色 + 边框实现层次 */
         .glass-box {
-            background: rgba(255, 255, 255, 0.18);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: var(--card);
+            border-radius: var(--radius-large);
+            border: 1px solid var(--border);
             padding: 24px;
             margin-bottom: 20px;
-            transition: all 0.3s ease;
+            transition: background 0.2s ease, border-color 0.2s ease;
         }
         .glass-box:hover {
-            background: rgba(255, 255, 255, 0.22);
+            background: var(--card-hover);
+            border-color: var(--card-border);
         }
         .filter-row {
             display: flex;
-            gap: 14px;
+            gap: 16px;
             flex-wrap: wrap;
             margin-bottom: 0;
         }
@@ -43,10 +108,13 @@
             position: relative;
         }
         .filter-item label {
-            color: #fff;
+            color: var(--text-1);
             display: block;
             margin-bottom: 8px;
-            font-weight: bold;
+            font-size: 12px;
+            line-height: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
         .btn-row{
             display:flex;
@@ -54,34 +122,48 @@
         }
         .dropdown-toggle {
             flex:1;
-            padding: 10px 14px;
-            border-radius: 8px;
-            border: none;
-            font-size: 15px;
-            background: #222831;
-            color: #ffffff;
+            padding: 0 14px;
+            height: 36px;
+            border-radius: var(--radius-small);
+            border: 1px solid transparent;
+            font-size: 14px;
+            line-height: 20px;
+            background: var(--fill-0);
+            color: var(--text-0);
             text-align: left;
             cursor: pointer;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .dropdown-toggle:hover {
+            background: var(--fill-1);
         }
         .clear-select-btn{
-            padding:0 12px;
-            border-radius:8px;
-            border:none;
-            background:#555b66;
-            color:#fff;
-            cursor:pointer;
+            padding: 0 12px;
+            height: 36px;
+            border-radius: var(--radius-small);
+            border: 1px solid transparent;
+            background: transparent;
+            color: var(--text-2);
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .clear-select-btn:hover{
+            background: var(--fill-1);
+            color: var(--text-0);
         }
         .global-dropdown-panel {
             position: fixed;
             width: calc(180px + 14px);
             max-height: 260px;
             overflow-y: auto;
-            background: #393E46;
-            border-radius: 8px;
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-medium);
             z-index: 9999999 !important;
             padding: 6px;
             display: none;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.35);
         }
         .global-dropdown-panel::-webkit-scrollbar {
             display: none;
@@ -94,19 +176,21 @@
             display: block;
         }
         .dropdown-item {
-            color: #fff;
+            color: var(--text-0);
             padding: 8px 10px;
+            font-size: 14px;
+            line-height: 20px;
             cursor: pointer;
-            border-radius: 6px;
+            border-radius: var(--radius-small);
             margin-bottom: 2px;
             transition: background 0.15s ease;
         }
         .dropdown-item:hover {
-            background: #5c6370;
+            background: var(--fill-1);
         }
         .dropdown-item.active {
-            background: #2d6cdf;
-            color: #fff;
+            background: var(--accent);
+            color: var(--accent-contrast);
             font-weight: 500;
         }
         .search-wrap-inline {
@@ -115,52 +199,104 @@
             position:relative;
         }
         .search-wrap-inline label{
-            color:#fff;
+            color: var(--text-1);
             display:block;
             margin-bottom:8px;
-            font-weight:bold;
+            font-size: 12px;
+            line-height: 16px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
         .search-input-box{
             position:relative;
         }
         #search-input {
             width: 100%;
-            padding: 10px 38px 10px 14px;
-            border-radius: 8px;
-            border: none;
-            font-size: 15px;
+            height: 36px;
+            padding: 0 38px 0 14px;
+            border-radius: var(--radius-small);
+            border: 1px solid transparent;
+            font-size: 14px;
+            line-height: 20px;
+            background: var(--fill-0);
+            color: var(--text-0);
             outline: none;
-            transition: box-shadow 0.25s;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        #search-input:hover {
+            background: var(--fill-1);
         }
         #search-input:focus {
-            box-shadow: 0 0 0 3px rgba(65, 114, 159, 0.4);
+            background: var(--fill-0);
+            border-color: var(--accent);
         }
         #search-input::placeholder {
-            color: #999;
+            color: var(--text-2);
         }
         .search-icon{
             position:absolute;
             right:12px;
             top:50%;
             transform:translateY(-50%);
-            color:#666;
-            font-size:18px;
-            cursor: pointer;
+            color: var(--text-2);
+            font-size:16px;
             pointer-events:none;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            color: #fff;
+            color: var(--text-0);
             margin-top:24px;
         }
         th, td {
             padding: 14px 10px;
             text-align: center;
-            border-bottom: 1px solid rgba(255,255,255,0.15);
+            border-bottom: 1px solid var(--border);
         }
         th {
-            background: rgba(0,0,0,0.3);
+            background: var(--th-bg);
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-1);
+        }
+        td {
+            font-size: 14px;
+            line-height: 20px;
+            color: var(--text-0);
+        }
+        td:nth-child(2), td:nth-child(3), td:nth-child(4) {
+            color: var(--text-1);
+        }
+        td:nth-child(5) {
+            color: var(--text-2);
+        }
+        .song-cell {
+            white-space: nowrap;
+        }
+        .copy-btn {
+            height: 24px;
+            padding: 0 10px;
+            margin-left: 8px;
+            font-size: 12px;
+            line-height: 16px;
+            background: transparent;
+            color: var(--text-2);
+            border: 1px solid var(--border);
+        }
+        .copy-btn:hover:not(:disabled) {
+            background: var(--fill-1);
+            color: var(--text-0);
+        }
+        .copy-btn.copied {
+            color: var(--accent);
+            border-color: var(--accent);
+            background: transparent;
+        }
+        tbody tr {
+            transition: background 0.15s ease;
+        }
+        tbody tr:hover {
+            background: var(--fill-0);
         }
         .table-wrap {
             opacity: 1;
@@ -172,45 +308,68 @@
         .page-box {
             display: flex;
             justify-content: center;
+            align-items: center;
             gap:10px;
             margin-top:20px;
         }
         button {
-            padding: 9px 18px;
-            border-radius: 8px;
+            height: 32px;
+            padding: 0 18px;
+            border-radius: var(--radius-small);
             border: none;
             cursor: pointer;
-            font-size:15px;
-            background: #41729F;
-            color:#fff;
-            transition: all 0.2s ease;
+            font-size: 14px;
+            line-height: 20px;
+            background: var(--fill-0);
+            color: var(--text-0);
+            transition: background 0.15s ease, color 0.15s ease;
         }
         button:hover:not(:disabled) {
-            filter: brightness(1.15);
+            background: var(--fill-1);
         }
         button:disabled{
-            background:#666;
+            background: transparent;
+            color: var(--text-2);
+            opacity: 0.55;
             cursor:not-allowed;
-            filter:none;
         }
         .bottom-btn-area{
             text-align:center;
             margin-top:30px;
         }
         #to-wheel{
-            background:#27ae60;
-            padding:12px 30px;
-            font-size:17px;
+            height: 44px;
+            padding: 0 30px;
+            font-size: 16px;
+            font-weight: 600;
+            background: var(--accent);
+            color: var(--accent-contrast);
+        }
+        #to-wheel:hover:not(:disabled) {
+            background: var(--accent-hover);
         }
         .empty-tip{
             text-align:center;
-            color:#fff;
+            color: var(--text-2);
             padding:40px;
-            font-size:16px;
+            font-size:14px;
+        }
+        #page-info {
+            color: var(--text-2);
+            font-size: 14px;
+            line-height: 32px;
+            margin: 0 12px;
         }
     </style>
 </head>
 <body>
+    <script>
+        // 尽早应用主题，避免刷新闪色
+        document.documentElement.dataset.theme = localStorage.getItem("playlistTheme") || "A";
+    </script>
+    <div class="topbar">
+        <button class="theme-toggle" id="theme-toggle">主题：极光青紫</button>
+    </div>
     <div class="global-dropdown-panel" id="globalPanel"></div>
 
     <div class="glass-box">
@@ -283,7 +442,7 @@
         <div id="empty-text" class="empty-tip" style="display:none;">暂无匹配歌曲</div>
         <div class="page-box">
             <button id="prev">上一页</button>
-            <span id="page-info" style="color:#fff;line-height:38px;margin:0 12px;"></span>
+            <span id="page-info"></span>
             <button id="next">下一页</button>
         </div>
     </div>
@@ -328,6 +487,47 @@ function debounce(fn, delay=180){
 const DATA_FILES = ["最新歌单.xlsx"];
 
 function str(v){ return String(v ?? "").trim(); }
+function esc(s){
+    return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;")
+                    .replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// 复制到剪贴板：优先 Clipboard API，非安全上下文降级 execCommand
+function copyText(text, done){
+    const fallback = ()=>{
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try{ document.execCommand("copy"); done && done(); }
+        catch(e){ console.warn("复制失败:", e); }
+        document.body.removeChild(ta);
+    };
+    if(navigator.clipboard && window.isSecureContext){
+        navigator.clipboard.writeText(text).then(()=>done && done(), fallback);
+    }else{
+        fallback();
+    }
+}
+function flashCopied(btn){
+    btn.classList.add("copied");
+    const old = "复制";
+    btn.innerText = "已复制";
+    clearTimeout(btn._copyTimer);
+    btn._copyTimer = setTimeout(()=>{
+        btn.innerText = old;
+        btn.classList.remove("copied");
+    }, 1200);
+}
+// 表格内复制按钮：事件委托（行内容会整体重建）
+tableBody.addEventListener("click", (e)=>{
+    const btn = e.target.closest(".copy-btn");
+    if(!btn) return;
+    e.stopPropagation();
+    copyText(btn.dataset.name || "", ()=>flashCopied(btn));
+});
 function splitVals(v){ return str(v).split("、").map(x=>x.trim()).filter(Boolean); }
 
 // 统计某列各取值出现次数（子类等列可能用「、」存多个值）
@@ -484,15 +684,17 @@ function renderTable(){
             emptyText.style.display = "block";
         }else{
             emptyText.style.display = "none";
-            tableBody.innerHTML = pageList.map(row=>`
+            tableBody.innerHTML = pageList.map(row=>{
+                const name = str(row["歌曲名称"]);
+                return `
                 <tr>
-                    <td>${str(row["歌曲名称"])}</td>
+                    <td class="song-cell"><span>${esc(name)}</span><button class="copy-btn" data-name="${esc(name)}" title="复制歌名">复制</button></td>
                     <td>${str(row["歌曲版本"])}</td>
                     <td>${str(row["主风格"])}</td>
                     <td>${str(row["情绪"])}</td>
                     <td>${str(row["歌曲语种"])}</td>
                 </tr>
-            `).join("");
+            `}).join("");
         }
         pageInfo.innerText = `第${currentPage}/${totalPage||1}页 共${total}首`;
         prevBtn.disabled = currentPage <=1;
@@ -513,6 +715,19 @@ toWheelBtn.onclick = ()=>{
     localStorage.setItem("wheelSongList", JSON.stringify(filterData));
     location.href = "wheel.html";
 }
+const THEME_NAMES = {A: "极光青紫", B: "落日暖调"};
+const themeToggle = document.getElementById("theme-toggle");
+function syncThemeLabel(){
+    themeToggle.innerText = `主题：${THEME_NAMES[document.documentElement.dataset.theme] || "极光青紫"}`;
+}
+themeToggle.onclick = ()=>{
+    const next = document.documentElement.dataset.theme === "B" ? "A" : "B";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("playlistTheme", next);
+    syncThemeLabel();
+}
+syncThemeLabel();
+
 loadExcel();
 </script>
 </body>

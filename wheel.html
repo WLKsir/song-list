@@ -5,73 +5,152 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>歌曲转盘</title>
     <style>
+        /* ===== Semi Design Tokens (Dark Mode 映射) ===== */
+        /* 主题 A：极光青紫（默认） */
+        :root {
+            --bg-inner: #0B1226;
+            --bg-outer: #04060D;
+            --card: rgba(23, 32, 59, 0.72);
+            --card-hover: rgba(28, 39, 72, 0.85);
+            --wheel-bg: #0E1730;
+            --hub-bg: #17203B;
+            --modal-bg: #1B2540;
+            --accent: #2DE1C2;
+            --accent-hover: #5CEBD3;
+            --accent-contrast: #04261F;
+            --title-a: #67E8F9;
+            --title-b: #A78BFA;
+            --ring-a: #2DE1C2;
+            --ring-b: #A78BFA;
+            --pointer: #F2547D;
+            --text-0: #F9F9F9;
+            --text-1: rgba(249,249,249,0.8);
+            --text-2: rgba(249,249,249,0.6);
+            --fill-0: rgba(255,255,255,0.12);
+            --fill-1: rgba(255,255,255,0.16);
+            --fill-2: rgba(255,255,255,0.20);
+            --border: rgba(255,255,255,0.10);
+            --card-border: rgba(255,255,255,0.18);
+            --radius-small: 3px;
+            --radius-medium: 6px;
+            --radius-large: 12px;
+            --font-stack: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+                "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+        /* 主题 B：落日暖调（明亮暖色浅色调） */
+        html[data-theme="B"] {
+            --bg-inner: #FFF3E2;
+            --bg-outer: #FFDDB8;
+            --card: rgba(255, 224, 189, 0.78);
+            --card-hover: rgba(255, 233, 205, 0.92);
+            --card-border: rgba(150, 82, 30, 0.22);
+            --wheel-bg: #FFF1E0;
+            --hub-bg: #FFF1E0;
+            --modal-bg: #FFF1E0;
+            --accent: #FF6B35;
+            --accent-hover: #FF8533;
+            --accent-contrast: #FFFFFF;
+            --title-a: #E8590C;
+            --title-b: #D6336C;
+            --ring-a: #FF6B35;
+            --ring-b: #FFB35C;
+            --pointer: #D6336C;
+            --text-0: #3D2314;
+            --text-1: rgba(61, 35, 20, 0.8);
+            --text-2: rgba(61, 35, 20, 0.6);
+            --fill-0: rgba(120, 65, 20, 0.08);
+            --fill-1: rgba(120, 65, 20, 0.13);
+            --fill-2: rgba(120, 65, 20, 0.18);
+            --border: rgba(120, 65, 20, 0.15);
+        }
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Microsoft Yahei", sans-serif;
+            font-family: var(--font-stack);
         }
         body {
             min-height:100vh;
-            background: radial-gradient(circle at center, #182244, #000000);
+            background: radial-gradient(circle at center, var(--bg-inner), var(--bg-outer)) fixed;
             padding:20px;
+            color: var(--text-0);
         }
         /* 页面主标题 */
         .page-title {
             text-align: center;
             font-size: 28px;
-            color: #fff;
+            line-height: 40px;
             letter-spacing: 2px;
             margin: 0 0 36px;
-            background: linear-gradient(90deg, #ffe066, #ff7b7b);
+            background: linear-gradient(90deg, var(--title-a), var(--title-b));
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
-            text-shadow: 0 0 12px rgba(255, 180, 80, 0.3);
         }
+        /* 卡片：去掉 backdrop-filter（大面积模糊是掉帧主因） */
         .glass-box {
-            background: rgba(255, 255, 255, 0.18);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.25);
+            background: var(--card);
+            border-radius: var(--radius-large);
+            border: 1px solid var(--border);
             padding:24px;
             margin: 20px auto;
             max-width:700px;
-            transition: all 0.3s ease;
+            transition: background 0.2s ease, border-color 0.2s ease;
         }
         .glass-box:hover {
-            transform: translateY(-4px);
-            border-color: rgba(255, 255, 255, 0.4);
-            box-shadow: 0 8px 30px rgba(100, 140, 255, 0.15);
+            background: var(--card-hover);
+            border-color: var(--card-border);
         }
-.topbar {
-    width: 100%;
-    max-width: 700px;
-    margin: 0 auto 24px;
-    text-align: right;
-}
-
-	.back-btn {
-  	   padding: 8px 0;
-  	   border: none;
-  	   background: transparent;
-	   color: rgba(180, 220, 255, 0.9);
- 	   cursor: pointer;
- 	   font-size: 15px;
- 	   font-weight: 500;
- 	   letter-spacing: 0.5px;
- 	   transition: all 0.2s ease;
- 	   text-shadow: 0 0 8px rgba(80, 145, 210, 0.8),
-	                 0 0 16px rgba(80, 145, 210, 0.5);
-	}
-	
-	.back-btn:hover {
-	    color: #ffffff;
-	    text-shadow: 0 0 12px rgba(80, 145, 210, 1),
-	                 0 0 24px rgba(80, 145, 210, 0.8);
-	    transform: translateX(-2px);
-	}
+        .topbar {
+            width: 100%;
+            max-width: 700px;
+            margin: 0 auto 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .theme-toggle {
+            height: 32px;
+            padding: 0 14px;
+            border: none;
+            border-radius: var(--radius-small);
+            background: var(--fill-0);
+            color: var(--text-1);
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 20px;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .theme-toggle:hover {
+            background: var(--fill-1);
+            color: var(--text-0);
+        }
+        .theme-toggle::before {
+            content: "";
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: var(--accent);
+            margin-right: 8px;
+            vertical-align: -1px;
+        }
+        .back-btn {
+            height: 32px;
+            padding: 0 12px;
+            border: none;
+            border-radius: var(--radius-small);
+            background: transparent;
+            color: var(--text-1);
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 20px;
+            transition: background 0.15s ease, color 0.15s ease;
+        }
+        .back-btn:hover {
+            background: var(--fill-0);
+            color: var(--text-0);
+        }
         .container{
             text-align:center;
             margin-top:30px;
@@ -82,6 +161,35 @@
             margin:0 auto 30px;
             position:relative;
         }
+        /* 转动光圈：转盘高速旋转时表面会糊成一片，
+           用外圈旋转的高亮弧线作为“正在转动”的视觉锚点 */
+        #wheel-box::before {
+            content: "";
+            position: absolute;
+            inset: -16px;
+            border-radius: 50%;
+            background: conic-gradient(
+                from 0deg,
+                transparent 0deg 20deg,
+                var(--ring-a) 80deg,
+                var(--ring-b) 110deg,
+                transparent 170deg 360deg
+            );
+            -webkit-mask: radial-gradient(circle, transparent 0 calc(50% - 7px), #000 calc(50% - 6px));
+            mask: radial-gradient(circle, transparent 0 calc(50% - 7px), #000 calc(50% - 6px));
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            animation: ringSpin 0.9s linear infinite;
+            animation-play-state: paused;
+            pointer-events: none;
+        }
+        #wheel-box.rolling::before {
+            opacity: 0.95;
+            animation-play-state: running;
+        }
+        @keyframes ringSpin {
+            to { transform: rotate(360deg); }
+        }
         #wheel{
             width: 100%;
             height: 100%;
@@ -89,19 +197,39 @@
             transition: transform 4s cubic-bezier(0.2,0.8,0.2,1);
             position:relative;
             overflow:hidden;
-            background:#ffffff;
+            /* 兜底色改成深色，避免扇区未绘制时闪白 */
+            background: var(--wheel-bg);
             transform-origin: 50% 50% !important;
         }
         /* 转盘转动发光动画 */
         #wheel.rolling {
             box-shadow: 0 0 25px rgba(255, 160, 60, 0.6);
         }
+        /* 中心轴：给转盘一个视觉锚点，旋转时更明显 */
+        .hub {
+            position:absolute;
+            left:50%;
+            top:50%;
+            width:64px;
+            height:64px;
+            transform:translate(-50%,-50%);
+            border-radius:50%;
+            background: var(--hub-bg);
+            border:3px solid #ffffff;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            font-size:26px;
+            z-index:98;
+            box-shadow:0 2px 10px rgba(0,0,0,0.45);
+            pointer-events:none;
+        }
         .pointer{
             width: 0;
             height: 0;
             border-left: 16px solid transparent;
             border-right: 16px solid transparent;
-            border-top: 32px solid #ff4757;
+            border-top: 32px solid var(--pointer);
             position:absolute;
             left:50%;
             top:-12px;
@@ -119,33 +247,37 @@
             animation: pointerShake 0.4s ease-out;
         }
         #start-btn{
-            padding:14px 36px;
+            height: 46px;
+            padding: 0 36px;
             font-size:18px;
-            font-weight: 500;
+            line-height: 26px;
+            font-weight: 600;
             border:none;
-            border-radius:10px;
-            background:#e67e22;
-            color:#fff;
+            border-radius: var(--radius-small);
+            background: var(--accent);
+            color: var(--accent-contrast);
             cursor:pointer;
-            transition: all 0.2s;
+            transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
         }
         #start-btn:active {
             transform: scale(0.96);
         }
         #start-btn:disabled{
-            background:#666;
+            background: transparent;
+            color: var(--text-2);
+            opacity: 0.55;
             cursor:not-allowed;
-            filter:none;
             transform: none;
         }
         #start-btn:not(:disabled):hover{
-            filter: brightness(1.15);
+            background: var(--accent-hover);
             transform: scale(1.04);
-            box-shadow: 0 4px 15px rgba(230, 126, 34, 0.4);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.35);
         }
         .result-text{
-            color:#fff;
+            color: var(--text-0);
             font-size:22px;
+            line-height: 30px;
             font-weight: 500;
             margin-top:24px;
             min-height:36px;
@@ -153,37 +285,30 @@
             letter-spacing: 1px;
         }
         .result-text strong {
-            color: #ffc370;
-            text-shadow: 0 0 8px rgba(255, 195, 112, 0.4);
+            color: var(--accent);
         }
         .tip-text{
-            color:rgba(255,255,255,0.85);
+            color: var(--text-1);
             margin:12px 0;
-            font-size: 16px;
+            font-size: 14px;
+            line-height: 20px;
             letter-spacing: 1px;
         }
         .tip-text.warn {
-            color: #ff9494;
-            text-shadow: 0 0 6px rgba(255, 100, 100, 0.3);
-        }
-        .desc-text {
-            margin-top: 14px;
-            color: rgba(255,255,255,0.55);
-            font-size: 14px;
+            color: var(--pointer);
         }
         /* 弹窗遮罩 */
         .modal-mask {
             position: fixed;
             inset: 0;
             background: rgba(0,0,0,0.75);
-            backdrop-filter: blur(4px);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 999;
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s ease;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
         }
         .modal-mask.show {
             opacity: 1;
@@ -191,10 +316,10 @@
         }
         /* 开奖弹窗 */
         .modal-box {
-            background: rgba(30, 38, 66, 0.92);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255,255,255,0.22);
-            border-radius: 20px;
+            background: var(--modal-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-large);
+            box-shadow: 0 4px 14px rgba(0,0,0,0.35);
             padding: 36px 32px;
             width: min(90vw, 420px);
             text-align: center;
@@ -205,20 +330,22 @@
             transform: scale(1);
         }
         .modal-title {
-            font-size: 26px;
-            color: #ffe066;
+            font-size: 24px;
+            line-height: 32px;
+            color: var(--title-a);
             margin-bottom: 16px;
         }
         .modal-song-name {
-            font-size: 22px;
-            color: #fff;
+            font-size: 20px;
+            line-height: 28px;
+            color: var(--text-0);
             padding: 12px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 12px;
+            background: var(--fill-0);
+            border-radius: var(--radius-medium);
             margin-bottom: 24px;
         }
         .modal-song-name span {
-            color: #ffc370;
+            color: var(--accent);
             font-weight: bold;
         }
         .modal-buttons {
@@ -227,30 +354,50 @@
             justify-content: center;
         }
         .modal-btn {
-            padding: 10px 24px;
-            border-radius: 8px;
+            height: 36px;
+            padding: 0 24px;
+            border-radius: var(--radius-small);
             border: none;
-            font-size: 16px;
+            font-size: 14px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: background 0.15s ease;
         }
         .modal-btn.again {
-            background: #e67e22;
-            color: #fff;
+            background: var(--accent);
+            color: var(--accent-contrast);
+        }
+        .modal-btn.again:hover {
+            background: var(--accent-hover);
         }
         .modal-btn.close {
-            background: rgba(255,255,255,0.2);
-            color: #fff;
+            background: var(--fill-1);
+            color: var(--text-0);
         }
-        .modal-btn:hover {
-            filter: brightness(1.15);
-            transform: scale(1.03);
+        .modal-btn.close:hover {
+            background: var(--fill-2);
+        }
+        .modal-btn.copy {
+            background: var(--fill-1);
+            color: var(--text-0);
+        }
+        .modal-btn.copy:hover {
+            background: var(--fill-2);
+        }
+        .modal-btn.copy.copied {
+            background: transparent;
+            color: var(--accent);
+            box-shadow: inset 0 0 0 1px var(--accent);
         }
     </style>
 </head>
 <body>
+    <script>
+        // 尽早应用主题，避免刷新闪色
+        document.documentElement.dataset.theme = localStorage.getItem("playlistTheme") || "A";
+    </script>
     <div class="topbar">
-    <button class="back-btn" onclick="location.href='index.html'">← 返回歌单</button>
+        <button class="back-btn" onclick="location.href='index.html'">← 返回歌单</button>
+        <button class="theme-toggle" id="theme-toggle">主题：极光青紫</button>
     </div>
 
     <h1 class="page-title">随机歌曲抽取转盘</h1>
@@ -260,10 +407,10 @@
         <div id="wheel-box">
             <div class="pointer" id="pointer"></div>
             <div id="wheel"></div>
+            <div class="hub">🎵</div>
         </div>
         <button id="start-btn">开始转动</button>
         <div class="result-text" id="result"></div>
-        <p class="desc-text">空格键快速抽取 | 转盘停止后弹出开奖结果</p>
     </div>
 
     <!-- 开奖弹窗 -->
@@ -273,6 +420,7 @@
             <div class="modal-song-name" id="modalSong"></div>
             <div class="modal-buttons">
                 <button class="modal-btn again" id="modalAgain">再来一次</button>
+                <button class="modal-btn copy" id="modalCopy">复制</button>
                 <button class="modal-btn close" id="modalClose">关闭</button>
             </div>
         </div>
@@ -280,6 +428,7 @@
 
 <script>
 const wheelDom = document.getElementById("wheel");
+const wheelBox = document.getElementById("wheel-box");
 const startBtn = document.getElementById("start-btn");
 const resultDom = document.getElementById("result");
 const tipDom = document.getElementById("list-tip");
@@ -288,10 +437,12 @@ const modalMask = document.getElementById("modalMask");
 const modalSong = document.getElementById("modalSong");
 const modalAgain = document.getElementById("modalAgain");
 const modalClose = document.getElementById("modalClose");
+const modalCopy = document.getElementById("modalCopy");
 
 let songList = [];
 let rotating = false;
 let lastDeg = 0;
+let lastPickName = "";
 const MAX_CAPACITY = 1000;
 const SCALE_THRESHOLD = 20;
 const HIDE_TEXT_THRESHOLD = 40;
@@ -324,16 +475,38 @@ function init(){
     }
     tipDom.classList.remove("warn");
     if(songList.length > MAX_CAPACITY){
-        alert(`歌曲数量超过上限${MAX_CAPACITY}首，仅加载前${MAX_CAPACITY}首`);
         songList = songList.slice(0, MAX_CAPACITY);
+        tipDom.innerText = `已加载前${MAX_CAPACITY}首歌曲（最高加载1000首）`;
+    }else{
+        tipDom.innerText = `转盘载入歌曲：${songList.length}首`;
     }
-    tipDom.innerText = `转盘载入歌曲：${songList.length}首`;
     drawWheel();
 }
 function drawWheel(){
     const total = songList.length;
     const sliceDeg = 360 / total;
-    const colors = ["#ff6b6b","#4ecdc4","#45b7d1","#ffe066","#a8e6cf","#ffd3a5","#c9b1ff","#ffacc5"];
+    /* 每套主题一组「明暗交替双色板」：相邻扇区永远一明一暗，
+       即使扇区极多，整体也是「明暗放射条纹」而非糊成一片白 */
+    const THEME_PALETTES = {
+        A: {
+            bright: ["#2DE1C2","#54A9FF","#A78BFA","#38BDF8","#4ADE80","#818CF8","#22D3EE","#F472B6"],
+            dark:   ["#11665A","#1E4FA3","#5B3FA8","#14587A","#166A43","#4547B8","#0E7490","#8C3A64"],
+            divider: "#101a3d",
+            ring: "#ffffff"
+        },
+        B: {
+            bright: ["#FF9E6B","#FFD166","#FF7A9E","#F97362","#FFB35C","#FFC97A","#FF8FB0","#F0A868"],
+            dark:   ["#A33B2A","#8C5A17","#93285C","#7A3B12","#8C2F24","#A3620F","#7C1F45","#6E2E10"],
+            divider: "#5C3A1E",
+            ring: "#5C3A1E"
+        }
+    };
+    const pal = THEME_PALETTES[document.documentElement.dataset.theme] || THEME_PALETTES.A;
+    const BRIGHT = pal.bright;
+    const DARK = pal.dark;
+    // 深色分隔线：高密度时靠它维持扇区轮廓，颜色贴近页面背景以强化「切片感」
+    const DIVIDER = pal.divider;
+    const dividerWidth = total > 24 ? 1 : 1.4;
     const {CX, CY, OUTER_RADIUS, SECTOR_RADIUS, size} = getWheelSize();
 
     let html = `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`;
@@ -355,19 +528,21 @@ function drawWheel(){
     for(let i = 0; i < total; i++){
         const start = sliceDeg * i;
         const end = sliceDeg * (i + 1);
-        const color = colors[i % colors.length];
-        html += createSlice(start, end, color, songList[i]["歌曲名称"], fontSize, showText, CX, CY, SECTOR_RADIUS);
+        const group = i % 2;
+        const idx = Math.floor(i / 2) % 8;
+        const color = group === 0 ? BRIGHT[idx] : DARK[idx];
+        html += createSlice(start, end, color, DIVIDER, dividerWidth, songList[i]["歌曲名称"], fontSize, showText, CX, CY, SECTOR_RADIUS);
     }
 
     html += `</g>`;
 
-    html += `<circle cx="${CX}" cy="${CY}" r="${OUTER_RADIUS}" fill="none" stroke="#ffffff" stroke-width="12" />`;
+    html += `<circle cx="${CX}" cy="${CY}" r="${OUTER_RADIUS}" fill="none" stroke="${pal.ring}" stroke-width="12" />`;
     html += `</svg>`;
 
     wheelDom.innerHTML = html;
 }
 
-function createSlice(startDeg, endDeg, fill, text, fontSize, showText, CX, CY, SECTOR_RADIUS){
+function createSlice(startDeg, endDeg, fill, strokeColor, strokeWidth, text, fontSize, showText, CX, CY, SECTOR_RADIUS){
     const deg2rad = d => d * Math.PI / 180;
     const offset = -90;
 
@@ -381,7 +556,7 @@ function createSlice(startDeg, endDeg, fill, text, fontSize, showText, CX, CY, S
 
     const largeArc = (endDeg - startDeg) > 180 ? 1 : 0;
 
-    const path = `<path d="M${CX},${CY} L${x1},${y1} A${SECTOR_RADIUS},${SECTOR_RADIUS} 0 ${largeArc},1 ${x2},${y2} Z" fill="${fill}" stroke="#fff" stroke-width="0.8" />`;
+    const path = `<path d="M${CX},${CY} L${x1},${y1} A${SECTOR_RADIUS},${SECTOR_RADIUS} 0 ${largeArc},1 ${x2},${y2} Z" fill="${fill}" stroke="${strokeColor}" stroke-width="${strokeWidth}" />`;
 
     if(!showText) return path;
 
@@ -405,12 +580,15 @@ function createSlice(startDeg, endDeg, fill, text, fontSize, showText, CX, CY, S
     return path + `
 <text x="${tx}" y="${ty}"
       fill="#ffffff"
+      stroke="${strokeColor}"
+      stroke-width="${Math.max(1.2, fontSize * 0.18)}"
+      paint-order="stroke"
+      stroke-linejoin="round"
       font-size="${fontSize}"
       text-anchor="middle"
       dominant-baseline="middle"
       transform="rotate(${midDeg},${tx},${ty})"
       style="
-          text-shadow: 0 1px 3px rgba(0,0,0,0.75);
           max-width: ${maxWidth}px;
           overflow: hidden;
           text-overflow: ellipsis;
@@ -430,6 +608,7 @@ function runDraw() {
     resultDom.style.opacity = "0";
     resultDom.innerText = "";
     wheelDom.classList.add("rolling");
+    wheelBox.classList.add("rolling");
 
     const total = songList.length;
     const sliceDeg = 360 / total;
@@ -443,6 +622,7 @@ function runDraw() {
         startBtn.disabled = false;
         startBtn.innerText = "开始转动";
         wheelDom.classList.remove("rolling");
+        wheelBox.classList.remove("rolling");
         // 指针抖动动画
         pointerDom.classList.add("pointer-shake");
         setTimeout(()=>pointerDom.classList.remove("pointer-shake"),400);
@@ -453,6 +633,7 @@ function runDraw() {
         let targetIndex = Math.floor(pointerAngle / sliceDeg);
         if(targetIndex >= total) targetIndex = total -1;
         const pick = songList[targetIndex];
+        lastPickName = String(pick["歌曲名称"] ?? "").trim();
         const showStr = `选中歌曲：<strong>${pick["歌曲名称"]}</strong> | ${pick["歌曲版本"]}`;
         resultDom.innerHTML = showStr;
         resultDom.style.opacity = "1";
@@ -467,6 +648,36 @@ startBtn.onclick = runDraw;
 
 // 弹窗关闭
 modalClose.onclick = () => modalMask.classList.remove("show");
+// 复制抽中歌名
+function copyText(text, done){
+    const fallback = ()=>{
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        try{ document.execCommand("copy"); done && done(); }
+        catch(e){ console.warn("复制失败:", e); }
+        document.body.removeChild(ta);
+    };
+    if(navigator.clipboard && window.isSecureContext){
+        navigator.clipboard.writeText(text).then(()=>done && done(), fallback);
+    }else{
+        fallback();
+    }
+}
+modalCopy.onclick = () => {
+    if(!lastPickName) return;
+    copyText(lastPickName, ()=>{
+        modalCopy.classList.add("copied");
+        modalCopy.innerText = "已复制";
+        setTimeout(()=>{
+            modalCopy.classList.remove("copied");
+            modalCopy.innerText = "复制";
+        }, 1200);
+    });
+};
 modalMask.onclick = (e) => {
     if(e.target === modalMask) modalMask.classList.remove("show");
 }
@@ -484,12 +695,27 @@ window.addEventListener("keydown", (e) => {
     }
 });
 
-// 窗口缩放重绘转盘
+// 窗口缩放重绘转盘（防抖，避免拖拽时高频重建 SVG）
+let resizeTimer = null;
 window.addEventListener("resize", ()=>{
-    if(songList.length > 0){
-        drawWheel();
-    }
+    if(songList.length === 0) return;
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(drawWheel, 200);
 });
+
+const THEME_NAMES = {A: "极光青紫", B: "落日暖调"};
+const themeToggle = document.getElementById("theme-toggle");
+function syncThemeLabel(){
+    themeToggle.innerText = `主题：${THEME_NAMES[document.documentElement.dataset.theme] || "极光青紫"}`;
+}
+themeToggle.onclick = ()=>{
+    const next = document.documentElement.dataset.theme === "B" ? "A" : "B";
+    document.documentElement.dataset.theme = next;
+    localStorage.setItem("playlistTheme", next);
+    syncThemeLabel();
+    if(songList.length > 0) drawWheel();
+}
+syncThemeLabel();
 
 init();
 </script>
