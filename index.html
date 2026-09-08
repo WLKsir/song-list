@@ -325,8 +325,7 @@ function debounce(fn, delay=180){
     }
 }
 
-// 依次尝试，兼容拆分前后的文件名
-const DATA_FILES = ["最新歌单_风格拆分.xlsx", "最新歌单.xlsx"];
+const DATA_FILES = ["最新歌单.xlsx"];
 
 function str(v){ return String(v ?? "").trim(); }
 function splitVals(v){ return str(v).split("、").map(x=>x.trim()).filter(Boolean); }
