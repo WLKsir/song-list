@@ -245,13 +245,19 @@
         table {
             width: 100%;
             border-collapse: collapse;
+            table-layout: fixed;
             color: var(--text-0);
             margin-top:24px;
+        }
+        th:first-child {
+            width: 30%;
         }
         th, td {
             padding: 14px 10px;
             text-align: center;
             border-bottom: 1px solid var(--border);
+            overflow-wrap: break-word;
+            word-break: break-word;
         }
         th {
             background: var(--th-bg);
@@ -270,8 +276,22 @@
         td:nth-child(5) {
             color: var(--text-2);
         }
-        .song-cell {
-            white-space: nowrap;
+        .song-line {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        .song-name {
+            flex: 1 1 auto;
+            min-width: 0;
+            text-align: left;
+            word-break: break-word;
+            /* 最多两行，超出省略，防止把其他列顶开 */
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
         .copy-btn {
             height: 24px;
@@ -282,6 +302,8 @@
             background: transparent;
             color: var(--text-2);
             border: 1px solid var(--border);
+            flex-shrink: 0;
+            white-space: nowrap;
         }
         .copy-btn:hover:not(:disabled) {
             background: var(--fill-1);
@@ -323,6 +345,7 @@
             background: var(--fill-0);
             color: var(--text-0);
             transition: background 0.15s ease, color 0.15s ease;
+            white-space: nowrap;
         }
         button:hover:not(:disabled) {
             background: var(--fill-1);
@@ -359,6 +382,97 @@
             font-size: 14px;
             line-height: 32px;
             margin: 0 12px;
+        }
+        /* ===== 移动端自适应 ===== */
+        @media (max-width: 640px) {
+            body {
+                padding: 16px 10px;
+            }
+            .glass-box {
+                padding: 16px;
+                border-radius: var(--radius-medium);
+            }
+            .filter-row {
+                gap: 10px;
+            }
+            .filter-item {
+                flex: 1 1 calc(50% - 5px);
+                min-width: calc(50% - 5px);
+            }
+            .search-wrap-inline {
+                flex: 1 1 100%;
+                min-width: 100%;
+            }
+            /* 表格转为卡片列表 */
+            table {
+                table-layout: auto;
+                margin-top: 12px;
+            }
+            thead {
+                display: none;
+            }
+            table, tbody, tr, td {
+                display: block;
+                width: 100%;
+            }
+            tbody tr {
+                background: var(--fill-0);
+                border-radius: var(--radius-medium);
+                margin-bottom: 6px;
+                padding: 2px 0;
+            }
+            td {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 10px;
+                padding: 5px 12px;
+                border-bottom: none;
+                text-align: right;
+                font-size: 13px;
+            }
+            td::before {
+                content: attr(data-label);
+                color: var(--text-2);
+                font-size: 12px;
+                flex-shrink: 0;
+            }
+            td.song-cell {
+                display: block;
+                text-align: left;
+                padding-top: 8px;
+                padding-bottom: 8px;
+            }
+            td.song-cell::before {
+                display: block;
+                margin-bottom: 2px;
+            }
+            .song-line {
+                justify-content: space-between;
+            }
+            .song-name {
+                -webkit-line-clamp: 2;
+                font-size: 15px;
+                line-height: 21px;
+                font-weight: 500;
+            }
+            .page-box {
+                flex-wrap: wrap;
+            }
+            #page-info {
+                width: 100%;
+                order: 3;
+                text-align: center;
+                line-height: 28px;
+                margin: 6px 0 0;
+            }
+            .bottom-btn-area {
+                margin-top: 20px;
+            }
+            #to-wheel {
+                width: 100%;
+                max-width: 320px;
+            }
         }
     </style>
 </head>
@@ -688,11 +802,11 @@ function renderTable(){
                 const name = str(row["歌曲名称"]);
                 return `
                 <tr>
-                    <td class="song-cell"><span>${esc(name)}</span><button class="copy-btn" data-name="${esc(name)}" title="复制歌名">复制</button></td>
-                    <td>${str(row["歌曲版本"])}</td>
-                    <td>${str(row["主风格"])}</td>
-                    <td>${str(row["情绪"])}</td>
-                    <td>${str(row["歌曲语种"])}</td>
+                    <td class="song-cell" data-label="歌曲名称"><div class="song-line"><span class="song-name">${esc(name)}</span><button class="copy-btn" data-name="${esc(name)}" title="复制歌名">复制</button></div></td>
+                    <td data-label="歌曲版本">${str(row["歌曲版本"])}</td>
+                    <td data-label="主风格">${str(row["主风格"])}</td>
+                    <td data-label="情绪">${str(row["情绪"])}</td>
+                    <td data-label="歌曲语种">${str(row["歌曲语种"])}</td>
                 </tr>
             `}).join("");
         }
