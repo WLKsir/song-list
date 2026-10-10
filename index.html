@@ -983,7 +983,8 @@ syncNativeTheme();
 loadExcel();
 
 // ===== 安卓安装包下载：二维码指向线上直链 =====
-const APK_URL = "https://mml-songlist.pages.dev/apk/maomao-songlist.apk";
+// 走 jsDelivr CDN 取仓库里的固定文件名安装包（实测国内最快，换版本不用改这里）
+const APK_URL = "https://cdn.jsdelivr.net/gh/WLKsir/song-list@main/apk/maomao-songlist.apk";
 const dlModal = document.getElementById("dl-modal");
 const dlQrBox = document.getElementById("dl-qr");
 const dlDirect = document.getElementById("dl-direct");
