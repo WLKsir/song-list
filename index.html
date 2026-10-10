@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>歌单列表</title>
     <script src="xlsx.full.min.js"></script>
+    <script src="qrcode.min.js"></script>
     <style>
         /* ===== Semi Design Tokens (Dark Mode 映射) ===== */
         /* 主题 A：极光青紫（默认） */
@@ -71,6 +72,91 @@
             margin: 0 auto 12px;
             display: flex;
             justify-content: flex-end;
+            gap: 8px;
+        }
+        /* 安卓下载入口：描边高亮，跟主题色走 */
+        #apk-download {
+            background: transparent;
+            border: 1px solid var(--accent);
+            color: var(--accent);
+        }
+        #apk-download:hover:not(:disabled) {
+            background: var(--fill-1);
+            color: var(--accent);
+        }
+        /* 下载弹层 */
+        .dl-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            z-index: 9999999;
+        }
+        .dl-modal.show {
+            display: flex;
+        }
+        .dl-card {
+            width: min(320px, 100%);
+            background: var(--bg-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-large);
+            padding: 22px;
+            text-align: center;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+        }
+        .dl-card h3 {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-0);
+        }
+        .dl-sub {
+            font-size: 12px;
+            line-height: 18px;
+            color: var(--text-2);
+            margin-top: 4px;
+        }
+        .dl-qr {
+            display: inline-block;
+            background: #ffffff;
+            padding: 12px;
+            border-radius: var(--radius-medium);
+            margin-top: 16px;
+            line-height: 0;
+        }
+        .dl-qr img, .dl-qr canvas {
+            display: block;
+        }
+        .dl-hint {
+            font-size: 12px;
+            color: var(--text-2);
+            margin-top: 12px;
+        }
+        .dl-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .dl-actions > * {
+            flex: 1;
+        }
+        a.dl-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 32px;
+            border-radius: var(--radius-small);
+            background: var(--accent);
+            color: var(--accent-contrast);
+            font-size: 13px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: background 0.15s ease;
+        }
+        a.dl-btn:hover {
+            background: var(--accent-hover);
         }
         .theme-toggle::before {
             content: "";
@@ -482,9 +568,23 @@
         document.documentElement.dataset.theme = localStorage.getItem("playlistTheme") || "A";
     </script>
     <div class="topbar">
+        <button id="apk-download">安卓下载</button>
         <button class="theme-toggle" id="theme-toggle">主题：极光青紫</button>
     </div>
     <div class="global-dropdown-panel" id="globalPanel"></div>
+
+    <div class="dl-modal" id="dl-modal">
+        <div class="dl-card">
+            <h3>猫猫歌单 · 安卓版</h3>
+            <div class="dl-sub">v1.0 · 约 1.6 MB · 支持安卓 7.0 及以上</div>
+            <div class="dl-qr" id="dl-qr"></div>
+            <div class="dl-hint">手机扫码下载安装包</div>
+            <div class="dl-actions">
+                <a class="dl-btn" id="dl-direct" href="#" download>本机直接下载</a>
+                <button id="dl-close">关闭</button>
+            </div>
+        </div>
+    </div>
 
     <div class="glass-box">
         <div class="filter-row">
@@ -598,7 +698,15 @@ function debounce(fn, delay=180){
     }
 }
 
-const DATA_FILES = ["最新歌单.xlsx"];
+// 运行环境判定：App 内的网页由 WebView 通过 appassets.androidplatform.net 加载
+const IS_APP = location.hostname === "appassets.androidplatform.net";
+
+// 歌单文件候选路径，按顺序取第一个读得到的
+//   App 内：先读原生静默同步下来的（/data/），读不到再退回 APK 内置那份（与页面同目录）
+//   网页端：维持原样，读同目录的歌单文件
+const DATA_FILES = IS_APP
+    ? ["/data/playlist.xlsx", "playlist.xlsx"]
+    : ["最新歌单.xlsx"];
 
 function str(v){ return String(v ?? "").trim(); }
 function esc(s){
@@ -680,25 +788,42 @@ function initDropdownData(){
     };
 }
 
-async function loadExcel(){
+async function loadExcel(silent){
     for(const file of DATA_FILES){
         try{
-            const res = await fetch(file);
+            const res = await fetch(file, silent ? {cache:"no-store"} : undefined);
             if(!res.ok) continue;
             const buf = await res.arrayBuffer();
             const workbook = XLSX.read(buf);
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             allData = XLSX.utils.sheet_to_json(sheet);
             initDropdownData();
-            filterChange();
-            return;
+            if(!silent) filterChange();
+            return true;
         }catch(e){
             console.warn("歌单读取失败:", file, e);
         }
     }
-    emptyText.style.display = "block";
-    emptyText.innerText = "歌单文件加载失败，请确认 xlsx 与本页在同一目录";
+    if(!silent){
+        emptyText.style.display = "block";
+        emptyText.innerText = "歌单文件加载失败，请确认 xlsx 与本页在同一目录";
+    }
+    return false;
 }
+
+// 原生后台同步到新歌单后会调这里：换数据但保留用户当前的筛选与搜索
+window.onPlaylistUpdated = async function(){
+    const keepKeyword = searchInput.value;
+    const keepSelected = Object.assign({}, selected);
+    const ok = await loadExcel(true);
+    if(!ok) return;
+    searchInput.value = keepKeyword;
+    Object.keys(selected).forEach(k=>{
+        if(k in keepSelected) selected[k] = keepSelected[k];
+    });
+    Object.keys(selected).forEach(updateLabel);
+    filterChange();
+};
 function renderPanel(type){
     const arr = window.dropSource[type];
     globalPanel.innerHTML = "";
@@ -830,19 +955,64 @@ toWheelBtn.onclick = ()=>{
     location.href = "wheel.html";
 }
 const THEME_NAMES = {A: "极光青紫", B: "落日暖调"};
+// 状态栏/导航栏配色跟随主题（仅 App 内生效，网页端自动忽略）
+const THEME_BAR = {
+    A: {color: "#0B1226", light: false},
+    B: {color: "#FFF3E2", light: true}
+};
 const themeToggle = document.getElementById("theme-toggle");
 function syncThemeLabel(){
     themeToggle.innerText = `主题：${THEME_NAMES[document.documentElement.dataset.theme] || "极光青紫"}`;
+}
+function syncNativeTheme(){
+    const native = window.MaoMaoNative;
+    if(!native || typeof native.setThemeColor !== "function") return;
+    const cfg = THEME_BAR[document.documentElement.dataset.theme] || THEME_BAR.A;
+    try{ native.setThemeColor(cfg.color, cfg.light); }catch(e){}
 }
 themeToggle.onclick = ()=>{
     const next = document.documentElement.dataset.theme === "B" ? "A" : "B";
     document.documentElement.dataset.theme = next;
     localStorage.setItem("playlistTheme", next);
     syncThemeLabel();
+    syncNativeTheme();
 }
 syncThemeLabel();
+syncNativeTheme();
 
 loadExcel();
+
+// ===== 安卓安装包下载：二维码指向线上直链 =====
+const APK_URL = "https://mml-songlist.pages.dev/apk/maomao-songlist.apk";
+const dlModal = document.getElementById("dl-modal");
+const dlQrBox = document.getElementById("dl-qr");
+const dlDirect = document.getElementById("dl-direct");
+const dlBtn = document.getElementById("apk-download");
+let qrMade = false;
+
+dlDirect.href = APK_URL;
+
+function openDlModal(){
+    dlModal.classList.add("show");
+    if(!qrMade && window.QRCode){
+        new QRCode(dlQrBox, {
+            text: APK_URL,
+            width: 196,
+            height: 196,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+        });
+        qrMade = true;
+    }
+}
+dlBtn.onclick = openDlModal;
+document.getElementById("dl-close").onclick = ()=> dlModal.classList.remove("show");
+dlModal.addEventListener("click", e=>{ if(e.target === dlModal) dlModal.classList.remove("show"); });
+document.addEventListener("keydown", e=>{ if(e.key === "Escape") dlModal.classList.remove("show"); });
+
+// App 内本来就已经装了应用，下载入口没意义，藏掉
+if(IS_APP) dlBtn.style.display = "none";
 </script>
 </body>
 </html>
